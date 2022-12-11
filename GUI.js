@@ -79,7 +79,8 @@ class SelectableButtons{
 
     SelectFirst(){
         const [firstKey] = this.buttons.keys();
-        this.Select(firstKey);
+        if(firstKey)
+            this.Select(firstKey);
     }
 }
 
