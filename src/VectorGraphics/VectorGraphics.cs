@@ -101,19 +101,26 @@ class VectorGraphics : Game {
         if(ImGUI.mouseOver){
             return;
         }
-        if(button == Input.MOUSE_BUTTON_1 && action == Input.PRESS){
-            start = Input.MousePosition;
-            end = Input.MousePosition;
-            dragging = true;
-            if(tool == "Rect"){
-                CreateShape(start, Shape.Rectangle, color);
+        if(tool == "Rect" || tool == "Ellipse"){
+            if(button == Input.MOUSE_BUTTON_1 && action == Input.PRESS){
+                start = Input.MousePosition;
+                end = Input.MousePosition;
+                dragging = true;
+                if(tool == "Rect"){
+                    CreateShape(start, Shape.Rectangle, color);
+                }
+                else if(tool == "Ellipse"){
+                    CreateShape(start, Shape.Ellipse, color);
+                }
             }
-            else if(tool == "Ellipse"){
-                CreateShape(start, Shape.Ellipse, color);
+            if(button == Input.MOUSE_BUTTON_1 && action == Input.RELEASE){
+                dragging = false;
             }
         }
-        if(button == Input.MOUSE_BUTTON_1 && action == Input.RELEASE){
-            dragging = false;
+        else if(tool == "Edit"){
+            if(button == Input.MOUSE_BUTTON_1 && action == Input.PRESS){
+                
+            }
         }
     }
 
@@ -163,7 +170,7 @@ class VectorGraphics : Game {
         color.g = ImGUI.Slider("G", color.g);
         color.b = ImGUI.Slider("B", color.b);
         color.a = ImGUI.Slider("A", color.a);
-        tool = ImGUI.Options(tool, ["Rect", "Ellipse", "Poly"]);
+        tool = ImGUI.Options(tool, ["Edit", "Rect", "Ellipse", "Poly"]);
         fontColor.r = ImGUI.Slider("FontR", fontColor.r);
         fontColor.g = ImGUI.Slider("FontG", fontColor.g);
         fontColor.b = ImGUI.Slider("FontB", fontColor.b);
