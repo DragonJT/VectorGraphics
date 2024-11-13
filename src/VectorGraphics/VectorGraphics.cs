@@ -1,68 +1,30 @@
 namespace VectorGraphics;
 
-using System.Runtime.InteropServices.Marshalling;
 using GameEngine;
 
-abstract class Component {
-    public required Entity entity;
-
-    public virtual void Draw(){}
-
-    public T? GetComponent<T>() where T:Component{
-        return entity.GetComponent<T>();
-    }
-}
-
-class Transform : Component {
-    public Vector2 position;
-    //public float angle;
-}
-
-enum Shape { Rectangle, Ellipse }
-
-class ShapeRenderer : Component {
-    public Vector2 size;
-    public Color color;
-    public Shape shape;
-
-    public override void Draw(){
-        var transform = GetComponent<Transform>()!;
-        var rect = Rect.CreateFromCenterSize(transform.position, size);
-        if(shape == Shape.Rectangle){
-            Graphics.DrawRect(rect, color);
-        }
-        else if(shape == Shape.Ellipse){
-            Graphics.DrawEllipse(rect, 32, color);
-        }
-    }
-}
-
-class TextRenderer : Component {
+class VGText {
     public string text = "";
     public float size = 0.5f;
     public Color color = Color.Black;
 
-    public override void Draw(){
-        var transform = GetComponent<Transform>()!;
+    public void Draw(Vector2 center){
         var width = Graphics.MeasureText(text, size);
-        var x = transform.position.x - width / 2f;
-        var y = transform.position.y - Graphics.FontHeight(size) / 2f;
+        var x = center.x - width / 2f;
+        var y = center.y - Graphics.FontHeight(size) / 2f;
         Graphics.DrawText(new Vector2(x, y), text, size, color);
     }
 }
 
-class Entity {
-    public readonly List<Component> components = [];
+class VGMesh(Mesh2D mesh, Color color) {
+    public Mesh2D mesh = mesh;
+    public Color color = color;
+    public VGText? text;
 
-    public T AddComponent<T>() where T:Component {
-        var component = Activator.CreateInstance<T>();
-        component.entity = this;
-        components.Add(component);
-        return component;
-    }
-
-    public T? GetComponent<T>() where T:Component {
-        return components.OfType<T>().FirstOrDefault();
+    public void Draw(){
+        Graphics.Draw(mesh, color);
+        if(text!=null){
+            text.Draw(mesh.Center);
+        }
     }
 }
 
@@ -70,32 +32,12 @@ class VectorGraphics : Game {
     bool dragging = false;
     Vector2 start;
     Vector2 end;
-    List<Entity> entities = [];
-    List<Entity> selected = [];
+    List<VGMesh> meshes = [];
+    List<VGMesh> selected = [];
     Color color = Color.Blue;
     Color fontColor = Color.Black;
     float fontSize = 0.5f;
     string tool = "Rect";
-
-    void CreateShape(Vector2 position, Shape shapeType, Color color){
-        var entity = new Entity();
-        var transform = entity.AddComponent<Transform>();
-        transform.position = position;
-        var shapeRenderer = entity.AddComponent<ShapeRenderer>();
-        shapeRenderer.shape = shapeType;
-        shapeRenderer.color = color;
-        entities.Add(entity);
-        selected.Clear();
-        selected.Add(entity);
-    }
-
-    void UpdateShape(Entity entity){
-        var rect = Rect.CreateFromStartEnd(start, end);
-        var transform = entity.GetComponent<Transform>()!;
-        transform.position = rect.Center;
-        var shapeRenderer = entity.GetComponent<ShapeRenderer>()!;
-        shapeRenderer.size = rect.Size;
-    }
 
     public override void MouseButtonCallback(int button, int action, int mods){
         if(ImGUI.mouseOver){
@@ -107,11 +49,13 @@ class VectorGraphics : Game {
                 end = Input.MousePosition;
                 dragging = true;
                 if(tool == "Rect"){
-                    CreateShape(start, Shape.Rectangle, color);
+                    meshes.Add(new VGMesh(Mesh2D.Rect(Rect.CreateFromStartEnd(start, end)), color));
                 }
                 else if(tool == "Ellipse"){
-                    CreateShape(start, Shape.Ellipse, color);
+                    meshes.Add(new VGMesh(Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32), color));
                 }
+                selected.Clear();
+                selected.Add(meshes.Last());
             }
             if(button == Input.MOUSE_BUTTON_1 && action == Input.RELEASE){
                 dragging = false;
@@ -126,13 +70,13 @@ class VectorGraphics : Game {
 
     public override void KeyCallback(int key, int scancode, int action, int mods){
         if(key == Input.KEY_BACKSPACE && (action == Input.PRESS || action == Input.REPEAT)){
-            foreach(var entity in selected){
-                var textRenderer = entity.GetComponent<TextRenderer>();
-                if(textRenderer!=null && textRenderer.text.Length > 0){
-                    textRenderer.text = textRenderer.text[0..^1];
+            foreach(var s in selected){
+                var vgtext = s.text;
+                if(vgtext!=null && vgtext.text.Length > 0){
+                    vgtext.text = vgtext.text[0..^1];
                 }
                 else{
-                    entities.Remove(entity);
+                    s.text = null;
                 }
             }
         }
@@ -142,8 +86,8 @@ class VectorGraphics : Game {
         if(codepoint >= 32 && codepoint < 128){
             if(selected.Count > 0){
                 foreach(var s in selected){
-                    var textRenderer = s.GetComponent<TextRenderer>();
-                    textRenderer ??= s.AddComponent<TextRenderer>();
+                    var textRenderer = s.text;
+                    textRenderer ??= s.text = new VGText();
                     textRenderer.color = fontColor;
                     textRenderer.size = fontSize;
                     textRenderer.text += (char)codepoint;
@@ -156,14 +100,17 @@ class VectorGraphics : Game {
         if(dragging){
             end = Input.MousePosition;
             foreach(var e in selected){
-                UpdateShape(e);
+                if(tool == "Rect"){
+                    e.mesh = Mesh2D.Rect(Rect.CreateFromStartEnd(start, end));
+                }
+                else if(tool == "Ellipse"){
+                    e.mesh = Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32);
+                }
             }
         }
         Graphics.Clear(Color.White);
-        foreach(var entity in entities){
-            foreach(var c in entity.components){
-                c.Draw();
-            }
+        foreach(var vgmesh in meshes){
+            vgmesh.Draw();
         }
         ImGUI.Start(new Rect(0,0,300,Screen.height));
         color.r = ImGUI.Slider("R", color.r);

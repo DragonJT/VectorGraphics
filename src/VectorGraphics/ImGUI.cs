@@ -14,8 +14,8 @@ static class ImGUI {
     public static bool mouseOver;
 
     public static void Start(Rect rect) {
-        Graphics.DrawRect(rect, new Color(0.2f,0.2f,0.2f,1));
-        Graphics.DrawRectBorder(rect, 2, Color.Blue);
+        Graphics.Draw(Mesh2D.Rect(rect), new Color(0.2f,0.2f,0.2f,1));
+        Graphics.Draw(Mesh2D.RectBorder(rect, 2), Color.Blue);
         x = rect.x + 10;
         y = rect.y + 10;
         width = rect.width - 20;
@@ -58,9 +58,9 @@ static class ImGUI {
             }
             color = Color.White;
         }
-        Graphics.DrawRectBorder(rect, 2, color);
+        Graphics.Draw(Mesh2D.RectBorder(rect, 2), color);
         var sliderRect = new Rect(rect.x, rect.y, rect.width * value, rect.height);
-        Graphics.DrawRect(sliderRect, color);
+        Graphics.Draw(Mesh2D.Rect(sliderRect), color);
         return value;
     }
 
@@ -81,9 +81,9 @@ static class ImGUI {
                 color = Color.White;
                 textColor = Color.Black;
             }
-            Graphics.DrawRect(rect, color);
+            Graphics.Draw(Mesh2D.Rect(rect), color);
             Graphics.DrawText(new Vector2(rect.x + 10, rect.y), options[i], characterScale, textColor);
-            Graphics.DrawRectBorder(rect, 2, Color.LightCyan);
+            Graphics.Draw(Mesh2D.RectBorder(rect, 2), Color.LightCyan);
             y+=widgetHeight;
         }
         return current;

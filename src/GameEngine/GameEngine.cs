@@ -1,5 +1,85 @@
 namespace GameEngine;
 
+public class Mesh2D {
+    public List<Vector2> vertices = [];
+    public List<uint> triangles = [];
+
+    public Rect GetBounds(){
+        var min = vertices[0];
+        var max = vertices[0];
+        for(var i = 1;i < vertices.Count;i++){
+            if(vertices[i].x < min.x){
+                min.x = vertices[i].x;
+            }
+            if(vertices[i].x > max.x){
+                max.x = vertices[i].x;
+            }
+            if(vertices[i].y < min.y){
+                min.y = vertices[i].y;
+            }
+            if(vertices[i].y > max.y){
+                max.y = vertices[i].y;
+            }
+        }
+        return new Rect(min.x, min.y, max.x - min.x, max.y - min.y);
+    }
+
+    public Vector2 Center => GetBounds().Center;
+
+    void DrawPoly(List<Vector2> points){
+        uint vertexID = (uint)vertices.Count;
+        vertices.AddRange(points);
+        for(uint i=2;i<points.Count;i++) {
+            triangles.AddRange([vertexID, vertexID+i-1, vertexID+i]);
+        }
+    }
+
+    void DrawRect(Rect rect) {
+        List<Vector2> points = [
+            new Vector2(rect.x, rect.y),
+            new Vector2(rect.x + rect.width, rect.y),
+            new Vector2(rect.x + rect.width, rect.y + rect.height),
+            new Vector2(rect.x, rect.y + rect.height)];
+        DrawPoly(points);
+    }
+
+    void DrawEllipse(Rect rect, int count) {
+        var points = new List<Vector2>();
+        var delta = MathF.PI * 2f / count;
+        var radians = 0f;
+        for(var i=0;i<count;i++) {
+            points.Add(rect.Center + new Vector2(MathF.Cos(radians) * rect.width/2f, MathF.Sin(radians) * rect.height/2f));
+            radians += delta;
+        }
+        DrawPoly(points);
+    }
+
+    void DrawRectBorder(Rect rect, float border) {
+        DrawRect(new Rect(rect.x, rect.y, rect.width, border));
+        DrawRect(new Rect(rect.x, rect.y, border, rect.height));
+        DrawRect(new Rect(rect.x, rect.y + rect.height - border, rect.width, border));
+        DrawRect(new Rect(rect.x + rect.width - border, rect.y, border, rect.height));
+    }
+
+    public static Mesh2D Rect(Rect rect){
+        var mesh = new Mesh2D();
+        mesh.DrawRect(rect);
+        return mesh;
+    }
+
+    public static Mesh2D Ellipse(Rect rect, int count){
+        var mesh = new Mesh2D();
+        mesh.DrawEllipse(rect, count);
+        return mesh;
+    }
+
+    public static Mesh2D RectBorder(Rect rect, float border){
+        var mesh = new Mesh2D();
+        mesh.DrawRectBorder(rect, border);
+        return mesh;
+    }
+}
+
 public struct Rect(float x, float y, float width, float height){
     public float x = x;
     public float y = y;
@@ -372,20 +452,8 @@ public static class Graphics {
         fontRenderer!.DrawText(position, text, characterScale, color);
     }
 
-    public static void DrawRect(Rect rect, Color color) {
-        fontRenderer!.DrawRect(rect, color);
-    }
-
-    public static void DrawEllipse(Rect rect, int count, Color color) {
-        fontRenderer!.DrawEllipse(rect, count, color);
-    }
-
-    public static void DrawTriangle(Vector2 position, float angle, float radius, Color color) {
-        fontRenderer!.DrawTriangle(position, angle, radius, color);
-    }
-
-    public static void DrawRectBorder(Rect rect, float border, Color color) {
-        fontRenderer!.DrawRectBorder(rect, border, color);
+    public static void Draw(Mesh2D mesh, Color color) {
+        fontRenderer!.DrawMesh(mesh, color);
     }
 
     public static float MeasureText(string text, float characterScale) {

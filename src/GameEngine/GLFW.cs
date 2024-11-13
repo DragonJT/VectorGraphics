@@ -383,12 +383,10 @@ void main()
         }
     }
 
-    public void DrawPoly(Vector2[] points, Vector2 uv, Color color){
-        for(uint i=2;i<points.Length;i++){
-            renderer.indices.AddUintArray([vertexID, vertexID+i-1, vertexID+i]);
-        }
-        for(var i=0;i<points.Length;i++){
-            renderer.vertices.AddFloatArray([points[i].x, points[i].y, color.r, color.g, color.b, color.a, uv.x, uv.y]);
+    public void DrawMesh(Mesh2D mesh, Vector2 uv, Color color){
+        renderer.indices.AddUintArray(mesh.triangles.Select(t=>t+vertexID).ToArray());
+        for(var i=0;i<mesh.vertices.Count;i++){
+            renderer.vertices.AddFloatArray([mesh.vertices[i].x, mesh.vertices[i].y, color.r, color.g, color.b, color.a, uv.x, uv.y]);
             vertexID++;
         }
     }
@@ -517,38 +515,9 @@ class FontRenderer{
         }
     }
 
-    public void DrawPoly(Vector2[] points, Color color) {
+    public void DrawMesh(Mesh2D mesh, Color color) {
         Vector2 uv = new (0.5f/width,0.5f/height);
-        dynamicTextureRenderer2D.DrawPoly(points, uv, color);
-    }
-
-    public void DrawRect(Rect rect, Color color) {
-        Vector2[] points = [
-            new Vector2(rect.x, rect.y),
-            new Vector2(rect.x + rect.width, rect.y),
-            new Vector2(rect.x + rect.width, rect.y + rect.height),
-            new Vector2(rect.x, rect.y + rect.height)];
-        Vector2 uv = new Vector2(0.5f/width,0.5f/height);
-        Vector2[] uvs = [uv, uv, uv, uv];
-        dynamicTextureRenderer2D.DrawPoly(points, uvs, color);
-    }
-
-    public void DrawEllipse(Rect rect, int count, Color color) {
-        List<Vector2> points = [];
-        var delta = MathF.PI * 2f / count;
-        var radians = 0f;
-        for(var i=0;i<count;i++) {
-            points.Add(rect.Center + new Vector2(MathF.Cos(radians) * rect.width/2f, MathF.Sin(radians) * rect.height/2f));
-            radians += delta;
-        }
-        DrawPoly([..points], color);
-    }
-
-    public void DrawRectBorder(Rect rect, float border, Color color) {
-        DrawRect(new Rect(rect.x, rect.y, rect.width, border), color);
-        DrawRect(new Rect(rect.x, rect.y, border, rect.height), color);
-        DrawRect(new Rect(rect.x, rect.y + rect.height - border, rect.width, border), color);
-        DrawRect(new Rect(rect.x + rect.width - border, rect.y, border, rect.height), color);
+        dynamicTextureRenderer2D.DrawMesh(mesh, uv, color);
     }
 
     public float DrawCharacter(Vector2 position, char c, float characterScale, Color color){
@@ -582,13 +551,6 @@ class FontRenderer{
             x += DrawCharacter(new Vector2(position.x + x, position.y), c, characterScale, color);
         }
         return x;
-    }
-
-    public void DrawTriangle(Vector2 position, float angle, float radius, Color color){
-        var a = new Vector2(-radius, -radius).Rotate(angle).Translate(position);
-        var b = new Vector2(radius, 0).Rotate(angle).Translate(position);
-        var c = new Vector2(-radius, radius).Rotate(angle).Translate(position);
-        DrawPoly([a,b,c], color);
     }
 
     public float MeasureCharacter(char c, float characterScale){
