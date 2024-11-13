@@ -27,6 +27,72 @@ class VGMesh(Mesh2D mesh, Color color) {
     }
 }
 
+static class Handles {
+    static string? id;
+    const float handleSize = 25;
+
+    static bool PositionHandle(string name, Vector2 position, float radius){
+        var handleRect = Rect.CreateFromCenterSize(position, new Vector2(radius, radius));
+        var color = id == name ? Color.White : Color.LightCyan;
+        Graphics.Draw(Mesh2D.Rect(handleRect), color);
+        Graphics.Draw(Mesh2D.RectBorder(handleRect, 2), Color.Black);
+        if(Input.GetButtonDown(Input.MOUSE_BUTTON_1) && handleRect.Contains(Input.MousePosition)) {
+            id = name;
+            return true;
+        }
+        if(Input.GetButtonUp(Input.MOUSE_BUTTON_1) && id == name){
+            id = null;
+            return true;
+        }
+        if(Input.GetButton(Input.MOUSE_BUTTON_1) && id == name){
+            return true;
+        }
+        return false;
+    }
+
+    public static bool RectHandle(Mesh2D mesh){
+        var rect = mesh.GetBounds();
+        var minx = rect.x;
+        var maxx = rect.x + rect.width;
+        var miny = rect.y;
+        var maxy = rect.y + rect.height;
+        var newMinX = minx;
+        var newMaxX = maxx;
+        var newMinY = miny;
+        var newMaxY = maxy;
+        var used = false;
+        Graphics.Draw(Mesh2D.RectBorder(rect, 5), Color.LightCyan);
+        if(PositionHandle("TopLeft", new Vector2(minx, miny), handleSize)){
+            newMinX += Input.DeltaMousePosition.x;
+            newMinY += Input.DeltaMousePosition.y;
+            used = true;
+        }
+        if(PositionHandle("TopRight", new Vector2(maxx, miny), handleSize)){
+            newMaxX += Input.DeltaMousePosition.x;
+            newMinY += Input.DeltaMousePosition.y;
+            used = true;
+        }
+        if(PositionHandle("BottomRight", new Vector2(maxx, maxy), handleSize)){
+            newMaxX += Input.DeltaMousePosition.x;
+            newMaxY += Input.DeltaMousePosition.y;
+            used = true;
+        }
+        if(PositionHandle("BottomLeft", new Vector2(minx, maxy), handleSize)){
+            newMinX += Input.DeltaMousePosition.x;
+            newMaxY += Input.DeltaMousePosition.y;
+            used = true;
+        }
+        if(used == true){
+            var newRect = new Rect(newMinX, newMinY, newMaxX - newMinX, newMaxY - newMinY);
+            for(var i = 0;i < mesh.vertices.Count;i++) {
+                mesh.vertices[i] = newRect.FromFraction(rect.Fraction(mesh.vertices[i]));
+            }
+            return true;
+        }
+        return false;
+    }
+}
+
 class VectorGraphics : Game {
     bool dragging = false;
     Vector2 start;
@@ -64,17 +130,6 @@ class VectorGraphics : Game {
                 dragging = false;
             }
         }
-        else if(tool == "Edit"){
-            if(button == Input.MOUSE_BUTTON_1 && action == Input.PRESS){
-                ClearSelected();
-                for(var i = meshes.Count-1;i>=0;i--){
-                    if(meshes[i].mesh.Contains(Input.MousePosition)){
-                        meshes[i].selected = true;
-                        break;
-                    }
-                }
-            }
-        }
     }
 
     public override void KeyCallback(int key, int scancode, int action, int mods){
@@ -109,20 +164,16 @@ class VectorGraphics : Game {
     }
 
     public override void Draw(){
+        var selected = meshes.FirstOrDefault(m=>m.selected);
         if(dragging){
             end = Input.MousePosition;
-            foreach(var m in meshes.Where(m=>m.selected)){
+            if(selected!=null){
                 if(tool == "Rect"){
-                    m.mesh = Mesh2D.Rect(Rect.CreateFromStartEnd(start, end));
+                    selected.mesh = Mesh2D.Rect(Rect.CreateFromStartEnd(start, end));
                 }
                 else if(tool == "Ellipse"){
-                    m.mesh = Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32);
+                    selected.mesh = Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32);
                 }
-            }
-        }
-        if(tool == "Edit" && Input.GetButton(Input.MOUSE_BUTTON_1)){
-            foreach(var m in meshes.Where(m=>m.selected)){
-                m.mesh.Translate(Input.DeltaMousePosition);
             }
         }
 
@@ -130,9 +181,27 @@ class VectorGraphics : Game {
         foreach(var vgmesh in meshes){
             vgmesh.Draw();
         }
-        foreach(var s in meshes.Where(m=>m.selected)){
-            Graphics.Draw(Mesh2D.RectBorder(s.mesh.GetBounds(), 5), Color.LightCyan);
+        if(tool == "Edit"){
+            bool rectHandleUsed = false;
+            if(selected != null){
+                rectHandleUsed = Handles.RectHandle(selected.mesh);
+            }
+            if(!rectHandleUsed){
+                if(Input.GetButtonDown(Input.MOUSE_BUTTON_1)){
+                    ClearSelected();
+                    for(var i = meshes.Count-1;i>=0;i--){
+                        if(meshes[i].mesh.Contains(Input.MousePosition)){
+                            meshes[i].selected = true;
+                            break;
+                        }
+                    }
+                }
+                else if(Input.GetButton(Input.MOUSE_BUTTON_1)){
+                    selected?.mesh.Translate(Input.DeltaMousePosition);
+                }
+            }
         }
+        
         ImGUI.Start(new Rect(0,0,300,Screen.height));
         color.r = ImGUI.Slider("R", color.r);
         color.g = ImGUI.Slider("G", color.g);

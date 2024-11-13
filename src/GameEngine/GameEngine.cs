@@ -72,7 +72,7 @@ public class Mesh2D {
         }
     }
 
-    void DrawRect(Rect rect) {
+    public void DrawRect(Rect rect) {
         List<Vector2> points = [
             new Vector2(rect.x, rect.y),
             new Vector2(rect.x + rect.width, rect.y),
@@ -124,6 +124,14 @@ public struct Rect(float x, float y, float width, float height){
     public float width = width;
     public float height = height;
 
+    public Vector2 Fraction(Vector2 v){
+        return new Vector2(JMath.InverseLerp(x, x+width, v.x), JMath.InverseLerp(y, y+height, v.y));
+    }
+
+    public Vector2 FromFraction(Vector2 f){
+        return new Vector2(JMath.Lerp(x, x+width, f.x), JMath.Lerp(y, y+height, f.y));
+    }
+
     public static Rect CreateFromCenterSize(Vector2 center, Vector2 size){
         var min = center - size/2f;
         return new Rect(min.x, min.y, size.x, size.y);
@@ -141,6 +149,10 @@ public struct Rect(float x, float y, float width, float height){
 
     public Vector2 Center => new (x + width/2f, y + height/2f);
     public Vector2 Size => new Vector2(width, height);
+
+    public override string ToString(){
+        return "("+x+","+y+","+width+","+height+")";
+    }
 }
 
 public struct Color(float r, float g, float b, float a = 1){
