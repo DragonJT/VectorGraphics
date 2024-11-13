@@ -111,21 +111,27 @@ class VectorGraphics : Game {
     public override void Draw(){
         if(dragging){
             end = Input.MousePosition;
-            foreach(var e in meshes.Where(m=>m.selected)){
+            foreach(var m in meshes.Where(m=>m.selected)){
                 if(tool == "Rect"){
-                    e.mesh = Mesh2D.Rect(Rect.CreateFromStartEnd(start, end));
+                    m.mesh = Mesh2D.Rect(Rect.CreateFromStartEnd(start, end));
                 }
                 else if(tool == "Ellipse"){
-                    e.mesh = Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32);
+                    m.mesh = Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32);
                 }
             }
         }
+        if(tool == "Edit" && Input.GetButton(Input.MOUSE_BUTTON_1)){
+            foreach(var m in meshes.Where(m=>m.selected)){
+                m.mesh.Translate(Input.DeltaMousePosition);
+            }
+        }
+
         Graphics.Clear(Color.White);
         foreach(var vgmesh in meshes){
             vgmesh.Draw();
         }
         foreach(var s in meshes.Where(m=>m.selected)){
-            Graphics.Draw(Mesh2D.RectBorder(s.mesh.GetBounds(), 10), Color.LightCyan);
+            Graphics.Draw(Mesh2D.RectBorder(s.mesh.GetBounds(), 5), Color.LightCyan);
         }
         ImGUI.Start(new Rect(0,0,300,Screen.height));
         color.r = ImGUI.Slider("R", color.r);

@@ -58,6 +58,12 @@ public class Mesh2D {
 
     public Vector2 Center => GetBounds().Center;
 
+    public void Translate(Vector2 translate) {
+        for(var i=0;i<vertices.Count;i++) {
+            vertices[i] = vertices[i] + translate;
+        }
+    }
+
     void DrawPoly(List<Vector2> points){
         uint vertexID = (uint)vertices.Count;
         vertices.AddRange(points);
