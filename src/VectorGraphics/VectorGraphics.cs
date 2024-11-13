@@ -19,12 +19,11 @@ class VGMesh(Mesh2D mesh, Color color) {
     public Mesh2D mesh = mesh;
     public Color color = color;
     public VGText? text;
-
+    public bool selected = true;
+    
     public void Draw(){
         Graphics.Draw(mesh, color);
-        if(text!=null){
-            text.Draw(mesh.Center);
-        }
+        text?.Draw(mesh.Center);
     }
 }
 
@@ -33,11 +32,16 @@ class VectorGraphics : Game {
     Vector2 start;
     Vector2 end;
     List<VGMesh> meshes = [];
-    List<VGMesh> selected = [];
     Color color = Color.Blue;
     Color fontColor = Color.Black;
     float fontSize = 0.5f;
     string tool = "Rect";
+
+    void ClearSelected(){
+        foreach(var m in meshes){
+            m.selected = false;
+        }
+    }
 
     public override void MouseButtonCallback(int button, int action, int mods){
         if(ImGUI.mouseOver){
@@ -45,6 +49,7 @@ class VectorGraphics : Game {
         }
         if(tool == "Rect" || tool == "Ellipse"){
             if(button == Input.MOUSE_BUTTON_1 && action == Input.PRESS){
+                ClearSelected();
                 start = Input.MousePosition;
                 end = Input.MousePosition;
                 dragging = true;
@@ -54,8 +59,6 @@ class VectorGraphics : Game {
                 else if(tool == "Ellipse"){
                     meshes.Add(new VGMesh(Mesh2D.Ellipse(Rect.CreateFromStartEnd(start, end), 32), color));
                 }
-                selected.Clear();
-                selected.Add(meshes.Last());
             }
             if(button == Input.MOUSE_BUTTON_1 && action == Input.RELEASE){
                 dragging = false;
@@ -63,20 +66,31 @@ class VectorGraphics : Game {
         }
         else if(tool == "Edit"){
             if(button == Input.MOUSE_BUTTON_1 && action == Input.PRESS){
-                
+                ClearSelected();
+                for(var i = meshes.Count-1;i>=0;i--){
+                    if(meshes[i].mesh.Contains(Input.MousePosition)){
+                        meshes[i].selected = true;
+                        break;
+                    }
+                }
             }
         }
     }
 
     public override void KeyCallback(int key, int scancode, int action, int mods){
         if(key == Input.KEY_BACKSPACE && (action == Input.PRESS || action == Input.REPEAT)){
-            foreach(var s in selected){
+            foreach(var s in meshes.Where(m=>m.selected).ToArray()){
                 var vgtext = s.text;
-                if(vgtext!=null && vgtext.text.Length > 0){
-                    vgtext.text = vgtext.text[0..^1];
+                if(vgtext!=null){ 
+                    if(vgtext.text.Length > 0){
+                        vgtext.text = vgtext.text[0..^1];
+                    }
+                    else{
+                        s.text = null;
+                    }
                 }
-                else{
-                    s.text = null;
+                else {
+                    meshes.Remove(s);
                 }
             }
         }
@@ -84,14 +98,12 @@ class VectorGraphics : Game {
 
     public override void CharCallback(uint codepoint){
         if(codepoint >= 32 && codepoint < 128){
-            if(selected.Count > 0){
-                foreach(var s in selected){
-                    var textRenderer = s.text;
-                    textRenderer ??= s.text = new VGText();
-                    textRenderer.color = fontColor;
-                    textRenderer.size = fontSize;
-                    textRenderer.text += (char)codepoint;
-                }
+            foreach(var s in meshes.Where(m=>m.selected)){
+                var textRenderer = s.text;
+                textRenderer ??= s.text = new VGText();
+                textRenderer.color = fontColor;
+                textRenderer.size = fontSize;
+                textRenderer.text += (char)codepoint;
             }
         }
     }
@@ -99,7 +111,7 @@ class VectorGraphics : Game {
     public override void Draw(){
         if(dragging){
             end = Input.MousePosition;
-            foreach(var e in selected){
+            foreach(var e in meshes.Where(m=>m.selected)){
                 if(tool == "Rect"){
                     e.mesh = Mesh2D.Rect(Rect.CreateFromStartEnd(start, end));
                 }
@@ -111,6 +123,9 @@ class VectorGraphics : Game {
         Graphics.Clear(Color.White);
         foreach(var vgmesh in meshes){
             vgmesh.Draw();
+        }
+        foreach(var s in meshes.Where(m=>m.selected)){
+            Graphics.Draw(Mesh2D.RectBorder(s.mesh.GetBounds(), 10), Color.LightCyan);
         }
         ImGUI.Start(new Rect(0,0,300,Screen.height));
         color.r = ImGUI.Slider("R", color.r);
